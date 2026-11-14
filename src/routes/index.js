@@ -60,7 +60,7 @@ router.delete('/info/carpetas/:id', authenticate, authorize(...DESPACHO), info.e
 router.post('/info/archivos', authenticate, authorize(...DESPACHO), info.recibirArchivo, info.subirArchivo);
 router.put('/info/archivos/:id', authenticate, authorize(...DESPACHO), info.renombrarArchivo);
 router.delete('/info/archivos/:id', authenticate, authorize(...DESPACHO), info.eliminarArchivo);
-router.get('/info/archivos/:id', authenticate, info.descargarArchivo);
+router.get('/info/archivos/:id/url', authenticate, info.urlArchivo);
 router.get('/info/enlaces', authenticate, info.listarEnlaces);
 router.put('/info/enlaces/:clave', authenticate, authorize(...DESPACHO), info.actualizarEnlace);
 

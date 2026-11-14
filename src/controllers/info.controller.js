@@ -1,13 +1,12 @@
-const fs = require('fs');
-const path = require('path');
 const crypto = require('crypto');
+const path = require('path');
 const multer = require('multer');
 const { z } = require('zod');
 const { Carpeta, Archivo, Enlace } = require('../models');
 const HttpError = require('../utils/httpError');
+const { subirObjeto, borrarObjetos, urlFirmada } = require('../utils/s3');
 
-// Archivos subidos al explorador de información de vuelo. Viven en disco; la base guarda su ubicación.
-const UPLOAD_DIR = process.env.UPLOADS_DIR || path.join(__dirname, '../../uploads');
+// Archivos de la información de vuelo. Viven en S3; la base guarda la clave de cada uno.
 const TAMANO_MAX = 50 * 1024 * 1024;
 
 const TIPOS_PERMITIDOS = new Set([
@@ -31,15 +30,9 @@ const TIPOS_PERMITIDOS = new Set([
   'application/octet-stream',
 ]);
 
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-
-const almacen = multer.diskStorage({
-  destination: UPLOAD_DIR,
-  filename: (req, file, cb) => cb(null, crypto.randomBytes(16).toString('hex') + path.extname(file.originalname).toLowerCase()),
-});
-
+// El archivo llega en memoria y se envía a S3 desde el controlador.
 const upload = multer({
-  storage: almacen,
+  storage: multer.memoryStorage(),
   limits: { fileSize: TAMANO_MAX },
   fileFilter: (req, file, cb) => {
     if (TIPOS_PERMITIDOS.has(file.mimetype)) return cb(null, true);
@@ -115,10 +108,6 @@ async function idsDelArbol(raiz) {
   return ids;
 }
 
-function borrarEnDisco(ruta) {
-  fs.unlink(path.join(UPLOAD_DIR, ruta), () => {});
-}
-
 // Contenido de una carpeta (o de la raíz): subcarpetas, archivos y la ruta para el encabezado.
 async function explorar(req, res) {
   const carpetaId = req.query.carpeta ? idSchema.parse(Number(req.query.carpeta)) : null;
@@ -168,13 +157,13 @@ async function actualizarCarpeta(req, res) {
   res.json(dtoCarpeta(carpeta));
 }
 
-// Borra la carpeta con sus subcarpetas y archivos (los archivos también del disco).
+// Borra la carpeta con sus subcarpetas y archivos, también en S3.
 async function eliminarCarpeta(req, res) {
   const carpeta = await buscarCarpeta(idSchema.parse(Number(req.params.id)));
   const ids = await idsDelArbol(carpeta.id);
 
   const archivos = await Archivo.findAll({ where: { carpetaId: ids }, attributes: ['ruta'] });
-  archivos.forEach((a) => borrarEnDisco(a.ruta));
+  await borrarObjetos(archivos.map((a) => a.ruta));
 
   await Carpeta.destroy({ where: { id: ids } });
   res.status(204).end();
@@ -184,21 +173,26 @@ async function subirArchivo(req, res) {
   if (!req.file) throw new HttpError(400, 'Seleccione un archivo');
 
   const carpetaId = idSchema.parse(Number(req.body.carpetaId));
+  await buscarCarpeta(carpetaId);
+
+  // Multer entrega el nombre en latin1; se convierte a UTF-8 para conservar tildes y eñes.
+  const original = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
+  const clave = crypto.randomBytes(16).toString('hex') + path.extname(original).toLowerCase();
+  const ruta = await subirObjeto(clave, req.file.buffer, req.file.mimetype);
+
   try {
-    await buscarCarpeta(carpetaId);
-    // Multer entrega el nombre en latin1; se convierte a UTF-8 para conservar tildes y eñes.
-    const original = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
     const archivo = await Archivo.create({
       nombre: original,
       nombreOriginal: original,
-      ruta: req.file.filename,
+      ruta,
       mime: req.file.mimetype,
       tamano: req.file.size,
       carpetaId,
     });
     res.status(201).json(dtoArchivo(archivo));
   } catch (err) {
-    borrarEnDisco(req.file.filename);
+    // Si la base falla, no dejamos el objeto huérfano en S3.
+    await borrarObjetos([ruta]).catch(() => {});
     throw err;
   }
 }
@@ -212,22 +206,24 @@ async function renombrarArchivo(req, res) {
 
 async function eliminarArchivo(req, res) {
   const archivo = await buscarArchivo(idSchema.parse(Number(req.params.id)));
-  borrarEnDisco(archivo.ruta);
+  await borrarObjetos([archivo.ruta]);
   await archivo.destroy();
   res.status(204).end();
 }
 
-// Entrega el archivo. Se pide con el token en la cabecera, así que el frontend lo descarga como blob.
-async function descargarArchivo(req, res) {
+// Devuelve una URL firmada de S3 (válida 5 minutos) para abrir o descargar el archivo.
+async function urlArchivo(req, res) {
   const archivo = await buscarArchivo(idSchema.parse(Number(req.params.id)));
-  const ruta = path.join(UPLOAD_DIR, archivo.ruta);
-  if (!fs.existsSync(ruta)) throw new HttpError(404, 'El archivo no se encuentra en el servidor');
-
   const extension = path.extname(archivo.nombreOriginal);
   const nombre = path.extname(archivo.nombre) ? archivo.nombre : archivo.nombre + extension;
-  res.setHeader('Content-Type', archivo.mime);
-  res.setHeader('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(nombre)}`);
-  res.sendFile(ruta);
+
+  const url = await urlFirmada({
+    clave: archivo.ruta,
+    nombre,
+    mime: archivo.mime,
+    descargar: req.query.modo === 'descargar',
+  });
+  res.json({ url });
 }
 
 async function listarEnlaces(req, res) {
@@ -252,7 +248,7 @@ module.exports = {
   subirArchivo,
   renombrarArchivo,
   eliminarArchivo,
-  descargarArchivo,
+  urlArchivo,
   listarEnlaces,
   actualizarEnlace,
 };

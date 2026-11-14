@@ -13,9 +13,6 @@ RUN npm ci --omit=dev && npm cache clean --force
 
 COPY . .
 
-# Archivos subidos por el explorador de información de vuelo. Conviene montarlo como volumen.
-RUN mkdir -p uploads && chown node:node uploads
-VOLUME ["/app/uploads"]
 
 EXPOSE 3000
 

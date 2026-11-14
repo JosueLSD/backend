@@ -1,6 +1,5 @@
 # Evita meter secretos, dependencias locales y archivos subidos dentro de la imagen.
 .env
 node_modules
-uploads
 .git
 *.log
