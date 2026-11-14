@@ -8,6 +8,7 @@ const funciones = require('../controllers/funciones.controller');
 const aeronaves = require('../controllers/aeronaves.controller');
 const aeropuertos = require('../controllers/aeropuertos.controller');
 const vuelos = require('../controllers/vuelos.controller');
+const info = require('../controllers/info.controller');
 
 const router = Router();
 
@@ -49,5 +50,18 @@ router.put('/vuelos/:id/dotacion', authenticate, authorize(...EDITORES), vuelos.
 router.put('/vuelos/:id/despacho', authenticate, authorize(...EDITORES), vuelos.actualizarDespacho);
 router.post('/vuelos/:id/firma', authenticate, authorize('Administrador', 'Piloto'), vuelos.firmar);
 router.post('/vuelos/:id/desbloquear', authenticate, authorize(ADMIN), vuelos.desbloquear);
+
+// Información de vuelo: explorador de carpetas y archivos, y enlaces de los cuadros inferiores.
+// Todos ven la información; Administrador y Despachador la modifican.
+router.get('/info/explorar', authenticate, info.explorar);
+router.post('/info/carpetas', authenticate, authorize(...DESPACHO), info.crearCarpeta);
+router.put('/info/carpetas/:id', authenticate, authorize(...DESPACHO), info.actualizarCarpeta);
+router.delete('/info/carpetas/:id', authenticate, authorize(...DESPACHO), info.eliminarCarpeta);
+router.post('/info/archivos', authenticate, authorize(...DESPACHO), info.recibirArchivo, info.subirArchivo);
+router.put('/info/archivos/:id', authenticate, authorize(...DESPACHO), info.renombrarArchivo);
+router.delete('/info/archivos/:id', authenticate, authorize(...DESPACHO), info.eliminarArchivo);
+router.get('/info/archivos/:id', authenticate, info.descargarArchivo);
+router.get('/info/enlaces', authenticate, info.listarEnlaces);
+router.put('/info/enlaces/:clave', authenticate, authorize(...DESPACHO), info.actualizarEnlace);
 
 module.exports = router;
