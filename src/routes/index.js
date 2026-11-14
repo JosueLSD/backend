@@ -9,6 +9,7 @@ const aeronaves = require('../controllers/aeronaves.controller');
 const aeropuertos = require('../controllers/aeropuertos.controller');
 const vuelos = require('../controllers/vuelos.controller');
 const info = require('../controllers/info.controller');
+const emergencias = require('../controllers/emergencias.controller');
 
 const router = Router();
 
@@ -51,6 +52,9 @@ router.put('/vuelos/:id/dotacion', authenticate, authorize(...EDITORES), vuelos.
 router.put('/vuelos/:id/despacho', authenticate, authorize(...EDITORES), vuelos.actualizarDespacho);
 router.post('/vuelos/:id/firma', authenticate, authorize('Administrador', 'Piloto'), vuelos.firmar);
 router.post('/vuelos/:id/desbloquear', authenticate, authorize(ADMIN), vuelos.desbloquear);
+
+// Tabla maestra de emergencias (orden de vuelo).
+router.get('/emergencias', authenticate, emergencias.listar);
 
 // Información de vuelo: explorador de carpetas y archivos, y enlaces de los cuadros inferiores.
 // Todos ven la información; Administrador y Despachador la modifican.

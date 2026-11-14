@@ -16,6 +16,7 @@ const Vuelo = require('./vuelo')(sequelize, DataTypes);
 const Carpeta = require('./carpeta')(sequelize, DataTypes);
 const Archivo = require('./archivo')(sequelize, DataTypes);
 const Enlace = require('./enlace')(sequelize, DataTypes);
+const Emergencia = require('./emergencia')(sequelize, DataTypes);
 
 Tripulante.belongsTo(Grado, { as: 'grado', foreignKey: 'grado_id' });
 Tripulante.belongsTo(Funcion, { as: 'funcion', foreignKey: 'funcion_id' });
@@ -33,4 +34,4 @@ Carpeta.belongsTo(Carpeta, { as: 'padre', foreignKey: 'padreId' });
 Carpeta.hasMany(Archivo, { as: 'archivos', foreignKey: 'carpetaId' });
 Archivo.belongsTo(Carpeta, { as: 'carpeta', foreignKey: 'carpetaId' });
 
-module.exports = { sequelize, Usuario, Grado, Funcion, Tripulante, Aeronave, Aeropuerto, Vuelo, Carpeta, Archivo, Enlace };
+module.exports = { sequelize, Usuario, Grado, Funcion, Tripulante, Aeronave, Aeropuerto, Vuelo, Carpeta, Archivo, Enlace, Emergencia };
