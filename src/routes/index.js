@@ -46,6 +46,7 @@ router.get('/vuelos', authenticate, vuelos.listar);
 router.post('/vuelos', authenticate, authorize(...DESPACHO), vuelos.crear);
 router.get('/vuelos/:id', authenticate, vuelos.obtener);
 router.put('/vuelos/:id/horas', authenticate, authorize(...EDITORES), vuelos.actualizarHoras);
+router.put('/vuelos/:id/ruta', authenticate, authorize(...EDITORES), vuelos.actualizarRuta);
 router.put('/vuelos/:id/dotacion', authenticate, authorize(...EDITORES), vuelos.actualizarDotacion);
 router.put('/vuelos/:id/despacho', authenticate, authorize(...EDITORES), vuelos.actualizarDespacho);
 router.post('/vuelos/:id/firma', authenticate, authorize('Administrador', 'Piloto'), vuelos.firmar);

@@ -27,6 +27,18 @@ const horasSchema = z.object({
   hora_llegada: hora.nullable(),
 });
 
+// Aeronave y ruta de un vuelo pendiente (CONFECCIÓN). Origen y destino deben ser distintos.
+const rutaSchema = z
+  .object({
+    aeronave_id: z.number().int().positive(),
+    origen_id: z.number().int().positive(),
+    destino_id: z.number().int().positive(),
+  })
+  .refine((datos) => datos.origen_id !== datos.destino_id, {
+    message: 'Origen y destino deben ser distintos',
+    path: ['destino_id'],
+  });
+
 // Paso 2 (DOTACIÓN): cada campo recibe el id de un tripulante o null para vaciarlo.
 const dotacionSchema = z
   .object(Object.fromEntries(CAMPOS.map((campo) => [campo, z.number().int().positive().nullable()])))
@@ -126,6 +138,29 @@ async function actualizarHoras(req, res) {
   res.json(toVueloDTO(await obtenerVuelo(vuelo.id)));
 }
 
+async function actualizarRuta(req, res) {
+  const vuelo = await buscarVuelo(req.params.id);
+  if (vuelo.estado === 'locked') {
+    throw new HttpError(409, 'El vuelo está bloqueado; no se puede modificar la aeronave ni la ruta');
+  }
+
+  const datos = rutaSchema.parse(req.body);
+  const [aeronave, origen, destino] = await Promise.all([
+    Aeronave.findByPk(datos.aeronave_id),
+    Aeropuerto.findByPk(datos.origen_id),
+    Aeropuerto.findByPk(datos.destino_id),
+  ]);
+  if (!aeronave) throw new HttpError(400, 'La aeronave no existe');
+  if (!origen || !destino) throw new HttpError(400, 'El origen o el destino no existe');
+
+  await vuelo.update({
+    aeronave_id: datos.aeronave_id,
+    origen_id: datos.origen_id,
+    destino_id: datos.destino_id,
+  });
+  res.json(toVueloDTO(await obtenerVuelo(vuelo.id)));
+}
+
 async function actualizarDotacion(req, res) {
   const vuelo = await buscarVuelo(req.params.id);
   if (vuelo.estado === 'locked') {
@@ -195,6 +230,7 @@ module.exports = {
   obtener,
   crear,
   actualizarHoras,
+  actualizarRuta,
   actualizarDotacion,
   actualizarDespacho,
   firmar,
