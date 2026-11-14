@@ -45,6 +45,9 @@ const despachoSchema = z.object({
   brief: z.record(z.string(), z.boolean()).optional(),
   pax: z.string().max(10).optional(),
   obs: z.string().max(2000).optional(),
+  // Orden de vuelo y bitácora: textos y nombres de la pestaña ORDEN DE VUELO.
+  ov: z.record(z.string(), z.string().max(4000)).optional(),
+  bitacora: z.record(z.string(), z.string().max(4000)).optional(),
 });
 
 const firmaSchema = z.object({ cip: z.string().trim().min(1) });
