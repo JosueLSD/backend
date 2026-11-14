@@ -74,7 +74,7 @@ const enlaceSchema = z.object({
     .refine((u) => /^https?:\/\//i.test(u), 'La dirección debe empezar con http:// o https://'),
 });
 
-const dtoCarpeta = (c) => ({ id: c.id, nombre: c.nombre, icono: c.icono, padreId: c.padreId });
+const dtoCarpeta = (c) => ({ id: c.id, nombre: c.nombre, icono: c.icono, padreId: c.padreId, actualizado: c.updatedAt });
 const dtoArchivo = (a) => ({
   id: a.id,
   nombre: a.nombre,
