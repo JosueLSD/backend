@@ -11,6 +11,7 @@ const vuelos = require('../controllers/vuelos.controller');
 const info = require('../controllers/info.controller');
 const satelital = require('../controllers/satelital.controller');
 const chat = require('../controllers/chat.controller');
+const pdf = require('../controllers/pdf.controller');
 const emergencias = require('../controllers/emergencias.controller');
 const catalogos = require('../controllers/catalogos.controller');
 
@@ -57,6 +58,9 @@ router.put('/vuelos/:id/dotacion', authenticate, authorize(...EDITORES), vuelos.
 router.put('/vuelos/:id/despacho', authenticate, authorize(...EDITORES), vuelos.actualizarDespacho);
 router.post('/vuelos/:id/firma', authenticate, authorize('Administrador', 'Piloto'), vuelos.firmar);
 router.delete('/vuelos/:id', authenticate, authorize(...DESPACHO), vuelos.eliminar);
+// Generación de PDF en el servidor: cualquier usuario autenticado.
+router.post('/pdf', authenticate, pdf.generar);
+
 // Chat de Notificaciones: todos los usuarios autenticados.
 router.get('/chat/mensajes', authenticate, chat.listar);
 router.post('/chat/mensajes', authenticate, chat.enviar);
