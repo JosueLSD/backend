@@ -10,6 +10,9 @@ module.exports = (sequelize, DataTypes) =>
       despacho: { type: DataTypes.JSON, allowNull: true },
       enviado: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
       firmadoPor: { type: DataTypes.STRING(120), allowNull: true },
+      // Número de orden correlativo por año (001-2026). Lo asigna el servidor al crear el vuelo.
+      numeroOrden: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+      anioOrden: { type: DataTypes.SMALLINT.UNSIGNED, allowNull: true },
     },
     { tableName: 'vuelos' }
   );

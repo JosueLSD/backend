@@ -18,6 +18,9 @@ const Archivo = require('./archivo')(sequelize, DataTypes);
 const Enlace = require('./enlace')(sequelize, DataTypes);
 const Emergencia = require('./emergencia')(sequelize, DataTypes);
 const Catalogo = require('./catalogo')(sequelize, DataTypes);
+const ImagenSatelital = require('./imagenSatelital')(sequelize, DataTypes);
+const Mensaje = require('./mensaje')(sequelize, DataTypes);
+const ChatLectura = require('./chatLectura')(sequelize, DataTypes);
 
 Tripulante.belongsTo(Grado, { as: 'grado', foreignKey: 'grado_id' });
 Tripulante.belongsTo(Funcion, { as: 'funcion', foreignKey: 'funcion_id' });
@@ -35,4 +38,11 @@ Carpeta.belongsTo(Carpeta, { as: 'padre', foreignKey: 'padreId' });
 Carpeta.hasMany(Archivo, { as: 'archivos', foreignKey: 'carpetaId' });
 Archivo.belongsTo(Carpeta, { as: 'carpeta', foreignKey: 'carpetaId' });
 
-module.exports = { sequelize, Usuario, Grado, Funcion, Tripulante, Aeronave, Aeropuerto, Vuelo, Carpeta, Archivo, Enlace, Emergencia, Catalogo };
+// Imagen satelital: documentos de cada vuelo. Al borrar el vuelo se borran también sus documentos.
+Vuelo.hasMany(ImagenSatelital, { as: 'imagenesSatelitales', foreignKey: 'vueloId', onDelete: 'CASCADE' });
+ImagenSatelital.belongsTo(Vuelo, { as: 'vuelo', foreignKey: 'vueloId' });
+
+// Chat: cada mensaje tiene su autor.
+Mensaje.belongsTo(Usuario, { as: 'autor', foreignKey: 'usuarioId' });
+
+module.exports = { Mensaje, ChatLectura, sequelize, Usuario, Grado, Funcion, Tripulante, Aeronave, Aeropuerto, Vuelo, Carpeta, Archivo, Enlace, Emergencia, Catalogo, ImagenSatelital };

@@ -9,6 +9,8 @@ const aeronaves = require('../controllers/aeronaves.controller');
 const aeropuertos = require('../controllers/aeropuertos.controller');
 const vuelos = require('../controllers/vuelos.controller');
 const info = require('../controllers/info.controller');
+const satelital = require('../controllers/satelital.controller');
+const chat = require('../controllers/chat.controller');
 const emergencias = require('../controllers/emergencias.controller');
 const catalogos = require('../controllers/catalogos.controller');
 
@@ -52,6 +54,16 @@ router.put('/vuelos/:id/ruta', authenticate, authorize(...EDITORES), vuelos.actu
 router.put('/vuelos/:id/dotacion', authenticate, authorize(...EDITORES), vuelos.actualizarDotacion);
 router.put('/vuelos/:id/despacho', authenticate, authorize(...EDITORES), vuelos.actualizarDespacho);
 router.post('/vuelos/:id/firma', authenticate, authorize('Administrador', 'Piloto'), vuelos.firmar);
+router.delete('/vuelos/:id', authenticate, authorize(...DESPACHO), vuelos.eliminar);
+// Chat de Notificaciones: todos los usuarios autenticados.
+router.get('/chat/mensajes', authenticate, chat.listar);
+router.post('/chat/mensajes', authenticate, chat.enviar);
+router.post('/chat/leer', authenticate, chat.leer);
+
+router.get('/vuelos/:id/satelital', authenticate, satelital.obtener);
+router.get('/vuelos/:id/satelital/:archivoId/contenido', authenticate, satelital.contenido);
+router.post('/vuelos/:id/satelital', authenticate, authorize(...EDITORES), satelital.recibirArchivos, satelital.subir);
+router.post('/vuelos/:id/satelital/actualizar', authenticate, authorize(...EDITORES), satelital.actualizar);
 router.post('/vuelos/:id/desbloquear', authenticate, authorize(ADMIN), vuelos.desbloquear);
 
 // Tabla maestra de emergencias (orden de vuelo).
@@ -69,6 +81,7 @@ router.delete('/info/carpetas/:id', authenticate, authorize(...DESPACHO), info.e
 router.post('/info/archivos', authenticate, authorize(...DESPACHO), info.recibirArchivo, info.subirArchivo);
 router.put('/info/archivos/:id', authenticate, authorize(...DESPACHO), info.renombrarArchivo);
 router.delete('/info/archivos/:id', authenticate, authorize(...DESPACHO), info.eliminarArchivo);
+router.get('/info/buscar-archivos', authenticate, info.buscarArchivos);
 router.get('/info/archivos/:id/url', authenticate, info.urlArchivo);
 router.get('/info/enlaces', authenticate, info.listarEnlaces);
 router.put('/info/enlaces/:clave', authenticate, authorize(...DESPACHO), info.actualizarEnlace);

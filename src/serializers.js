@@ -42,6 +42,7 @@ const toVueloDTO = (v) => ({
   destino: v.destino ? toAeropuertoDTO(v.destino) : null,
   dotacion: Object.fromEntries(CAMPOS.map((campo) => [campo, v[campo] ? toTripulanteDTO(v[campo]) : null])),
   despacho: v.despacho || {},
+  orden: v.anioOrden ? `${String(v.numeroOrden).padStart(3, '0')}-${v.anioOrden}` : null,
   enviado: v.enviado,
   firmadoPor: v.firmadoPor,
 });

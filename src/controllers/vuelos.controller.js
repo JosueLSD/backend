@@ -1,5 +1,6 @@
 const { z } = require('zod');
-const { Vuelo, Aeronave, Aeropuerto, Tripulante, Usuario, Grado, Funcion } = require('../models');
+const { sequelize, Vuelo, Aeronave, Aeropuerto, Tripulante, Usuario, Grado, Funcion, ImagenSatelital } = require('../models');
+const { borrarObjetos } = require('../utils/s3');
 const { CAMPOS_DOTACION } = require('../constants');
 const { toVueloDTO } = require('../serializers');
 const HttpError = require('../utils/httpError');
@@ -62,6 +63,34 @@ const despachoSchema = z.object({
   bitacora: z.record(z.string(), z.string().max(4000)).optional(),
   // Plan de vuelo (hoja P.V.): casillas y opciones de la pestaña 3.
   pv: z.record(z.string(), z.any()).optional(),
+  // Formato de vuelo diario: cada campo del formulario es un texto.
+  formato_diario: z.record(z.string(), z.string().max(1000)).optional(),
+  // Maletín de vuelo: accesos directos a documentos de INFO DE VUELO (id y nombre al guardar).
+  accesos_maletin: z.array(z.object({ id: z.number().int().positive(), nombre: z.string().max(255) })).max(100).optional(),
+  // Datos del vuelo: fecha, código, COMEX/FINEX, tripulación y cartilla de briefing.
+  datos_vuelo: z.record(z.string(), z.any()).optional(),
+  // Vale de entrega: fecha, a quién se entrega y los items (el orden lo da la posición en la lista).
+  vale_entrega: z
+    .object({
+      fecha: z.string().max(10),
+      se_entrega: z.string().max(200),
+      items: z
+        .array(
+          z.object({
+            cantidad: z.string().max(20),
+            material: z.string().max(200),
+            observacion: z.string().max(300),
+          })
+        )
+        .max(100),
+    })
+    .optional(),
+  // Firma de la dotación: PNG dibujado o subido (data URL). Cadena vacía = sin firma.
+  firma: z
+    .string()
+    .max(300000)
+    .refine((s) => s === '' || s.startsWith('data:image/png;base64,'), 'La firma debe ser una imagen PNG')
+    .optional(),
 });
 
 const firmaSchema = z.object({ cip: z.string().trim().min(1) });
@@ -115,15 +144,31 @@ async function obtener(req, res) {
 
 async function crear(req, res) {
   const datos = crearSchema.parse(req.body);
+  const anio = Number(datos.fecha.slice(0, 4));
 
-  const vuelo = await Vuelo.create({
-    fecha: datos.fecha,
-    horaSalida: null,
-    horaLlegada: null,
-    estado: 'pending',
-    aeronave_id: datos.aeronave_id,
-    origen_id: datos.origen_id,
-    destino_id: datos.destino_id,
+  // El número de orden es el siguiente del año; la transacción evita que dos altas tomen el mismo.
+  const vuelo = await sequelize.transaction(async (transaccion) => {
+    const ultimo = await Vuelo.findOne({
+      where: { anioOrden: anio },
+      order: [['numeroOrden', 'DESC']],
+      attributes: ['numeroOrden'],
+      lock: transaccion.LOCK.UPDATE,
+      transaction: transaccion,
+    });
+    return Vuelo.create(
+      {
+        fecha: datos.fecha,
+        horaSalida: null,
+        horaLlegada: null,
+        estado: 'pending',
+        aeronave_id: datos.aeronave_id,
+        origen_id: datos.origen_id,
+        destino_id: datos.destino_id,
+        numeroOrden: (ultimo ? ultimo.numeroOrden : 0) + 1,
+        anioOrden: anio,
+      },
+      { transaction: transaccion }
+    );
   });
 
   res.status(201).json(toVueloDTO(await obtenerVuelo(vuelo.id)));
@@ -221,6 +266,17 @@ async function firmar(req, res) {
   res.json(toVueloDTO(await obtenerVuelo(vuelo.id)));
 }
 
+// Solo se eliminan vuelos pendientes; los asegurados son registros históricos.
+async function eliminar(req, res) {
+  const vuelo = await buscarVuelo(req.params.id);
+  if (vuelo.estado === 'locked') throw new HttpError(409, 'El vuelo está asegurado y no se puede eliminar');
+  // Los documentos de la imagen satelital se borran en la base por cascada; también hay que borrarlos de S3.
+  const imagenes = await ImagenSatelital.findAll({ where: { vueloId: vuelo.id }, attributes: ['ruta'] });
+  await vuelo.destroy();
+  await borrarObjetos(imagenes.map((i) => i.ruta)).catch(() => {});
+  res.status(204).end();
+}
+
 async function desbloquear(req, res) {
   const vuelo = await buscarVuelo(req.params.id);
   await vuelo.update({ estado: 'pending', firmadoPor: null, enviado: false });
@@ -237,4 +293,5 @@ module.exports = {
   actualizarDespacho,
   firmar,
   desbloquear,
+  eliminar,
 };

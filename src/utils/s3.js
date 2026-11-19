@@ -53,4 +53,11 @@ async function urlFirmada({ clave, nombre, mime, descargar }) {
   );
 }
 
-module.exports = { subirObjeto, borrarObjetos, urlFirmada };
+// Descarga el contenido de un objeto (lo usa el servidor para entregar la imagen satelital).
+async function descargarObjeto(clave) {
+  comprobarBucket();
+  const respuesta = await cliente.send(new GetObjectCommand({ Bucket: BUCKET, Key: clave }));
+  return Buffer.from(await respuesta.Body.transformToByteArray());
+}
+
+module.exports = { subirObjeto, borrarObjetos, urlFirmada, descargarObjeto };

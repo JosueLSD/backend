@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const path = require('path');
 const multer = require('multer');
 const { z } = require('zod');
+const { Op } = require('sequelize');
 const { Carpeta, Archivo, Enlace } = require('../models');
 const HttpError = require('../utils/httpError');
 const { subirObjeto, borrarObjetos, urlFirmada } = require('../utils/s3');
@@ -226,6 +227,19 @@ async function urlArchivo(req, res) {
   res.json({ url });
 }
 
+// Busca archivos por nombre para agregarlos a los accesos del maletín de vuelo.
+async function buscarArchivos(req, res) {
+  const q = String(req.query.q || '').trim().slice(0, 100);
+  if (q.length < 2) return res.json([]);
+  const archivos = await Archivo.findAll({
+    where: { nombre: { [Op.like]: `%${q}%` } },
+    include: [{ model: Carpeta, as: 'carpeta', attributes: ['nombre'] }],
+    order: [['nombre', 'ASC']],
+    limit: 30,
+  });
+  res.json(archivos.map((a) => ({ id: a.id, nombre: a.nombre, carpeta: a.carpeta ? a.carpeta.nombre : '' })));
+}
+
 async function listarEnlaces(req, res) {
   const enlaces = await Enlace.findAll({ order: [['id', 'ASC']] });
   res.json(enlaces.map(dtoEnlace));
@@ -249,6 +263,7 @@ module.exports = {
   renombrarArchivo,
   eliminarArchivo,
   urlArchivo,
+  buscarArchivos,
   listarEnlaces,
   actualizarEnlace,
 };
