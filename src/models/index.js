@@ -21,6 +21,7 @@ const Catalogo = require('./catalogo')(sequelize, DataTypes);
 const ImagenSatelital = require('./imagenSatelital')(sequelize, DataTypes);
 const Mensaje = require('./mensaje')(sequelize, DataTypes);
 const ChatLectura = require('./chatLectura')(sequelize, DataTypes);
+const FirmaTripulante = require('./firmaTripulante')(sequelize, DataTypes);
 
 Tripulante.belongsTo(Grado, { as: 'grado', foreignKey: 'grado_id' });
 Tripulante.belongsTo(Funcion, { as: 'funcion', foreignKey: 'funcion_id' });
@@ -45,4 +46,4 @@ ImagenSatelital.belongsTo(Vuelo, { as: 'vuelo', foreignKey: 'vueloId' });
 // Chat: cada mensaje tiene su autor.
 Mensaje.belongsTo(Usuario, { as: 'autor', foreignKey: 'usuarioId' });
 
-module.exports = { Mensaje, ChatLectura, sequelize, Usuario, Grado, Funcion, Tripulante, Aeronave, Aeropuerto, Vuelo, Carpeta, Archivo, Enlace, Emergencia, Catalogo, ImagenSatelital };
+module.exports = { Mensaje, ChatLectura, FirmaTripulante, sequelize, Usuario, Grado, Funcion, Tripulante, Aeronave, Aeropuerto, Vuelo, Carpeta, Archivo, Enlace, Emergencia, Catalogo, ImagenSatelital };

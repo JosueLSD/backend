@@ -34,6 +34,8 @@ router.get('/tripulantes', authenticate, tripulantes.listar);
 router.post('/tripulantes', authenticate, authorize(ADMIN), tripulantes.crear);
 router.put('/tripulantes/:id', authenticate, authorize(ADMIN), tripulantes.actualizar);
 router.delete('/tripulantes/:id', authenticate, authorize(ADMIN), tripulantes.eliminar);
+router.get('/tripulantes/:id/firma', authenticate, tripulantes.obtenerFirma);
+router.put('/tripulantes/:id/firma', authenticate, authorize(ADMIN), tripulantes.guardarFirma);
 
 // Catálogos para los selects
 router.get('/grados', authenticate, grados.listar);
@@ -63,7 +65,7 @@ router.post('/chat/leer', authenticate, chat.leer);
 router.get('/vuelos/:id/satelital', authenticate, satelital.obtener);
 router.get('/vuelos/:id/satelital/:archivoId/contenido', authenticate, satelital.contenido);
 router.post('/vuelos/:id/satelital', authenticate, authorize(...EDITORES), satelital.recibirArchivos, satelital.subir);
-router.post('/vuelos/:id/satelital/actualizar', authenticate, authorize(...EDITORES), satelital.actualizar);
+router.delete('/vuelos/:id/satelital', authenticate, authorize(...EDITORES), satelital.limpiar);
 router.post('/vuelos/:id/desbloquear', authenticate, authorize(ADMIN), vuelos.desbloquear);
 
 // Tabla maestra de emergencias (orden de vuelo).

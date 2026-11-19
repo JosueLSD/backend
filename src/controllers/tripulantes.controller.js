@@ -1,5 +1,5 @@
 const { z } = require('zod');
-const { Tripulante, Grado, Funcion } = require('../models');
+const { Tripulante, Grado, Funcion, FirmaTripulante } = require('../models');
 const { toTripulanteDTO } = require('../serializers');
 const HttpError = require('../utils/httpError');
 
@@ -98,4 +98,32 @@ async function eliminar(req, res) {
   res.status(204).end();
 }
 
-module.exports = { listar, crear, actualizar, eliminar };
+// Firma del tripulante (PNG en data URL). Vacía si no tiene.
+async function obtenerFirma(req, res) {
+  const tripulante = await Tripulante.findByPk(req.params.id, { attributes: ['id'] });
+  if (!tripulante) throw new HttpError(404, 'Tripulante no encontrado');
+  const firma = await FirmaTripulante.findByPk(tripulante.id);
+  res.json({ firma: firma ? firma.firma : '' });
+}
+
+// Guarda o borra la firma. Cadena vacía = sin firma.
+const firmaSchema = z.object({
+  firma: z
+    .string()
+    .max(300000)
+    .refine((s) => s === '' || s.startsWith('data:image/png;base64,'), 'La firma debe ser una imagen PNG'),
+});
+
+async function guardarFirma(req, res) {
+  const tripulante = await Tripulante.findByPk(req.params.id, { attributes: ['id'] });
+  if (!tripulante) throw new HttpError(404, 'Tripulante no encontrado');
+  const { firma } = firmaSchema.parse(req.body);
+  if (firma === '') {
+    await FirmaTripulante.destroy({ where: { tripulanteId: tripulante.id } });
+  } else {
+    await FirmaTripulante.upsert({ tripulanteId: tripulante.id, firma });
+  }
+  res.json({ firma });
+}
+
+module.exports = { listar, crear, actualizar, eliminar, obtenerFirma, guardarFirma };

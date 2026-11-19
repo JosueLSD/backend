@@ -85,12 +85,6 @@ const despachoSchema = z.object({
         .max(100),
     })
     .optional(),
-  // Firma de la dotación: PNG dibujado o subido (data URL). Cadena vacía = sin firma.
-  firma: z
-    .string()
-    .max(300000)
-    .refine((s) => s === '' || s.startsWith('data:image/png;base64,'), 'La firma debe ser una imagen PNG')
-    .optional(),
 });
 
 const firmaSchema = z.object({ cip: z.string().trim().min(1) });

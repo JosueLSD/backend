@@ -118,27 +118,15 @@ async function subir(req, res) {
   res.json(await listar(vuelo.id));
 }
 
-// Actualizar: deja de mostrar los documentos anteriores y muestra solo los recién subidos.
-// Los anteriores no se borran: quedan ocultos como historial.
-async function actualizar(req, res) {
+// Limpiar: borra todos los documentos del vuelo (base y S3).
+async function limpiar(req, res) {
   const vuelo = await buscarVuelo(req);
   if (vuelo.estado === 'locked') throw new HttpError(409, 'El vuelo está asegurado; no se pueden cambiar las imágenes');
 
-  const nuevos = await ImagenSatelital.count({ where: { vueloId: vuelo.id, nuevo: true } });
-  if (!nuevos) throw new HttpError(409, 'No hay documentos nuevos para actualizar');
-
-  await sequelize.transaction(async (transaccion) => {
-    await ImagenSatelital.update(
-      { visible: false },
-      { where: { vueloId: vuelo.id, nuevo: false }, transaction: transaccion }
-    );
-    await ImagenSatelital.update(
-      { nuevo: false },
-      { where: { vueloId: vuelo.id, nuevo: true }, transaction: transaccion }
-    );
-  });
-
-  res.json(await listar(vuelo.id));
+  const imagenes = await ImagenSatelital.findAll({ where: { vueloId: vuelo.id }, attributes: ['ruta'] });
+  await ImagenSatelital.destroy({ where: { vueloId: vuelo.id } });
+  await borrarObjetos(imagenes.map((i) => i.ruta)).catch(() => {});
+  res.status(204).end();
 }
 
-module.exports = { recibirArchivos, obtener, subir, actualizar, contenido };
+module.exports = { recibirArchivos, obtener, subir, limpiar, contenido };
