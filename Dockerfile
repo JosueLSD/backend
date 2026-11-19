@@ -2,7 +2,7 @@
 FROM node:22-alpine
 
 # Chromium para generar los PDF en el servidor (ver src/utils/pdf.js).
-RUN apk add --no-cache chromium nss freetype harfbuzz ca-certificates ttf-freefont
+RUN apk add --no-cache chromium nss freetype harfbuzz ca-certificates ttf-freefont font-carlito
 ENV CHROME_PATH=/usr/bin/chromium
 
 ENV NODE_ENV=production \
